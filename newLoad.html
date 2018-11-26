@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <script src="jquery.js"></script>
+    <title>Document</title>
+    <style>
+        body{
+            width: 100%
+        }
+        .target{
+            position: relative;
+            margin:  0 auto;
+            width: 90%
+        }
+
+        .target::after{
+            content: '';
+            display: block;
+            clear: both;
+        }
+
+        *{
+            margin: 0;
+            padding: 0
+        }
+        .new {
+            width: 200px;
+            padding: 10px;
+            margin: 10px;
+            position: absolute;
+        }
+
+        img{
+            width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <div class="target">
+    </div>
+    <div id="load">你看不到我</div>
+    
+    <script>
+        
+start()
+        var $load = $('#load'),
+            perPageCount = 30,
+            curPage = 1,
+            isDataArrive = true,
+            isFirst = true,
+            colHeight = [];
+
+        $(window).on('scroll',function(){
+            if(!isDataArrive){
+                return 
+            }
+            if(isVisible($load)){
+                start()
+            }
+        })
+
+        //判断节点是否进入视野
+        function isVisible($el){
+            var scrollH = $(window).scrollTop(),
+                winH = $(window).height(),
+                top = $el.offset().top
+            
+            if( top < winH + scrollH ){
+                return true
+            }else{
+                return false
+            }
+        }    
+
+        //主流程
+        function start(){
+            getData(function(list){
+                isDataArrive = true
+                $.each(list,function(i,item){
+                    var $node = getNode(item)
+                    $node.find('img').on('load',function(){
+                        $('.target').append($node)
+                        //进行瀑布流布局
+                        waterFall($node)
+                    })
+                })
+            })
+            isDataArrive = false
+        }
+
+        //获取数据
+        function getData(callback){
+            $.ajax({
+                url:"https://platform.sina.com.cn/slide/album_tech",
+                dataType:"jsonp",
+                jsonp:"jsoncallback",
+                data:{
+                    app_key: '1271687855',
+                    num: perPageCount,
+                    page: curPage
+                }
+            }).done(function(ret){
+                if(ret && ret.status && ret.status.code === '0'){
+                    callback(ret.data)
+                    curPage++
+                }
+
+            })
+        }
+
+        //DOM拼接
+        function getNode(item){
+            var tpl = ''
+            tpl += '<div class="new">'
+            tpl += '<img src="'+item.img_url+'">'
+            tpl += '<h6>'+item.short_name+'</h6>'
+            tpl += '<p>'+item.name+'</p>'
+            tpl += '</div>'
+            return $(tpl)
+        }
+
+        //瀑布流布局
+        function waterFall($node){
+            if(isFirst){
+                itemWidth = $node.outerWidth(true),
+                colNum = parseInt($('.target').width()/itemWidth)
+                for(var i = 0 ; i < colNum ; i++){
+                    colHeight[i]  = 0
+                }
+                console.log(colNum)
+                isFirst = false
+            }
+            
+
+            
+            var minIndex = 0,
+                minHeight = colHeight[0]
+            for(var i = 0 ;i < colNum ;i++){
+                if(colHeight[i] < minHeight){
+                    minHeight = colHeight[i]
+                    minIndex = i
+                }
+            }
+
+            $node.css({
+                left:minIndex*itemWidth,
+                top:minHeight
+            })
+
+            colHeight[minIndex] += $node.outerHeight(true)
+
+            //找到数组的最大值
+            
+
+            $('.target').height(Math.max.apply(null,colHeight))
+        }
+    </script>
+</body>
+</html>
